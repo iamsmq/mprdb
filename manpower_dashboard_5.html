@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Southern Region — Manpower Master</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --navy:#0b1f3a; --navy2:#132a4d; --gold:#c8952b; --gold2:#e0b458;
+    --bg:#f3f5f8; --card:#ffffff; --line:#e1e5ec;
+    --txt:#1b2431; --sub:#5c6878;
+    --ok:#1f8a52; --warn:#c07a17; --danger:#c0392b;
+    --ok-bg:#e8f6ee; --warn-bg:#fdf1e0; --danger-bg:#fbe9e7;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--txt);}
+  header{background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;padding:18px 28px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;}
+  header h1{margin:0;font-size:19px;font-weight:600;letter-spacing:.3px;}
+  header .sub{font-size:12px;color:#b9c6dc;margin-top:2px;}
+  .brandline{height:4px;background:linear-gradient(90deg,var(--gold),var(--gold2));}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;}
+  button{cursor:pointer;border:none;border-radius:6px;padding:9px 14px;font-size:13px;font-weight:600;transition:.15s;}
+  .btn-gold{background:var(--gold);color:#fff;}
+  .btn-gold:hover{background:var(--gold2);}
+  .btn-outline{background:transparent;color:#fff;border:1px solid #5a6b8c;}
+  .btn-outline:hover{background:#1c3560;}
+  .btn-sm{padding:5px 9px;font-size:12px;border-radius:5px;}
+  main{padding:20px 28px 60px;max-width:1500px;margin:0 auto;}
+
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px;}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;border-top:3px solid var(--navy);}
+  .kpi.alert-danger{border-top-color:var(--danger);}
+  .kpi.alert-warn{border-top-color:var(--warn);}
+  .kpi .num{font-size:26px;font-weight:700;}
+  .kpi .lbl{font-size:12px;color:var(--sub);margin-top:2px;}
+
+  .tabs{display:flex;gap:4px;border-bottom:2px solid var(--line);margin-bottom:16px;flex-wrap:wrap;}
+  .tab{padding:10px 16px;font-size:13px;font-weight:600;color:var(--sub);cursor:pointer;border-bottom:3px solid transparent;}
+  .tab.active{color:var(--navy);border-bottom-color:var(--gold);}
+
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px;}
+  .card h3{margin:0 0 12px;font-size:14px;color:var(--navy);}
+
+  .filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
+  select,input[type=text],input[type=date]{padding:7px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;}
+  input[type=search]{padding:7px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;min-width:220px;}
+
+  table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  th{background:var(--navy);color:#fff;text-align:left;padding:8px;position:sticky;top:0;}
+  td{padding:7px 8px;border-bottom:1px solid var(--line);}
+  tr:hover td{background:#f7f9fc;}
+  .tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;}
+  .tag-ok{background:var(--ok-bg);color:var(--ok);}
+  .tag-warn{background:var(--warn-bg);color:var(--warn);}
+  .tag-danger{background:var(--danger-bg);color:var(--danger);}
+  .tag-gray{background:#eceff3;color:var(--sub);}
+
+  .wa-btn{background:#25d366;color:#fff;border-radius:5px;padding:4px 8px;font-size:11px;text-decoration:none;font-weight:700;display:inline-block;}
+  .wa-btn:hover{background:#1ebc59;}
+  .edit-btn{background:#eceff3;color:var(--navy);}
+  .del-btn{background:#fbe9e7;color:var(--danger);}
+
+  .table-wrap{overflow:auto;max-height:65vh;border:1px solid var(--line);border-radius:8px;}
+
+  .modal-bg{display:none;position:fixed;inset:0;background:rgba(11,31,58,.5);z-index:50;align-items:center;justify-content:center;}
+  .modal-bg.active{display:flex;}
+  .modal{background:#fff;border-radius:10px;padding:22px;width:600px;max-width:92vw;max-height:88vh;overflow:auto;}
+  .modal h3{margin-top:0;color:var(--navy);}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;}
+  .form-grid label{font-size:12px;color:var(--sub);font-weight:600;display:block;margin-bottom:4px;}
+  .form-grid .full{grid-column:1/-1;}
+  .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
+
+  .empty{text-align:center;color:var(--sub);padding:40px;font-size:13px;}
+  .footnote{font-size:11px;color:var(--sub);margin-top:8px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Southern Region Manpower Master</h1>
+    <div class="sub">Iqama · License · Leave · Vehicle · Contact — single record per employee</div>
+  </div>
+  <div class="toolbar">
+    <button class="btn-outline" onclick="document.getElementById('fileInput').click()">Upload Excel</button>
+    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleUpload(event)">
+    <button class="btn-outline" onclick="downloadTemplate()">Download Template</button>
+    <button class="btn-gold" onclick="exportMaster()">Export Master</button>
+    <button class="btn-gold" onclick="openModal()">+ Add Employee</button>
+  </div>
+</header>
+<div class="brandline"></div>
+
+<main>
+
+  <div class="kpis" id="kpiRow"></div>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="all" onclick="switchTab('all')">All Employees</div>
+    <div class="tab" data-tab="iqama" onclick="switchTab('iqama')">Iqama Expiry</div>
+    <div class="tab" data-tab="license" onclick="switchTab('license')">License Expiry</div>
+    <div class="tab" data-tab="leave" onclick="switchTab('leave')">On Leave</div>
+    <div class="tab" data-tab="inactive" onclick="switchTab('inactive')">Inactive / Exited</div>
+  </div>
+
+  <div class="card">
+    <div class="filters">
+      <input type="search" id="searchBox" placeholder="Search name, iqama, mobile..." oninput="render()">
+      <select id="stationFilter" onchange="render()">
+        <option value="">All Stations</option>
+      </select>
+      <select id="statusFilter" onchange="render()">
+        <option value="">All Status</option>
+        <option value="active">Active</option>
+        <option value="exited">Exited</option>
+        <option value="leave">On Leave</option>
+      </select>
+    </div>
+
+    <div id="panelAll" class="panel active"><div class="table-wrap"><table id="tableAll"></table></div></div>
+    <div id="panelIqama" class="panel"><div class="table-wrap"><table id="tableIqama"></table></div></div>
+    <div id="panelLicense" class="panel"><div class="table-wrap"><table id="tableLicense"></table></div></div>
+    <div id="panelLeave" class="panel"><div class="table-wrap"><table id="tableLeave"></table></div></div>
+    <div id="panelInactive" class="panel"><div class="table-wrap"><table id="tableInactive"></table></div></div>
+
+    <div class="footnote">WhatsApp button opens a click-to-chat link (wa.me) with the number pre-filled — you send the message manually. True auto-send requires the WhatsApp Business API (separate paid setup), not possible from a browser file.</div>
+  </div>
+
+</main>
+
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h3 id="modalTitle">Add Employee</h3>
+    <div class="form-grid">
+      <div class="full"><label>Employee Name *</label><input type="text" id="f_name"></div>
+      <div><label>Employee Number</label><input type="text" id="f_empNo"></div>
+      <div><label>Iqama Number</label><input type="text" id="f_iqama"></div>
+      <div><label>Iqama Expiry</label><input type="date" id="f_iqamaExp"></div>
+      <div><label>Profession (on Iqama)</label><input type="text" id="f_profession"></div>
+      <div><label>Mobile Number</label><input type="text" id="f_mobile" placeholder="9665XXXXXXXX"></div>
+      <div><label>Station / Department</label>
+        <select id="f_station">
+          <option>Khamis Mushait Hub</option>
+          <option>Abha</option>
+          <option>Najran</option>
+          <option>Bisha</option>
+          <option>Sarat Abida</option>
+          <option>Muhayil</option>
+          <option>Dhahran Al Janub</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div><label>Joining Date</label><input type="date" id="f_join"></div>
+      <div><label>Last Working Day</label><input type="date" id="f_lwd"></div>
+      <div><label>Leave Start</label><input type="date" id="f_leaveStart"></div>
+      <div><label>Leave End</label><input type="date" id="f_leaveEnd"></div>
+      <div><label>License Type</label>
+        <select id="f_licType"><option value="">—</option><option>Private</option><option>Light Transport</option><option>Heavy Transport</option><option>Motorcycle</option></select>
+      </div>
+      <div><label>License Expiry</label><input type="date" id="f_licExp"></div>
+      <div><label>Vehicle Plate</label><input type="text" id="f_vehiclePlate"></div>
+      <div><label>Vehicle Brand</label><input type="text" id="f_vehicleBrand" placeholder="Toyota, Hyundai..."></div>
+      <div><label>Vehicle Name</label><input type="text" id="f_vehicleName" placeholder="Hilux, Porter..."></div>
+      <div><label>Vendor</label><input type="text" id="f_vendor" placeholder="Owned / vendor name"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-outline" style="color:var(--navy);border-color:var(--line)" onclick="closeModal()">Cancel</button>
+      <button class="btn-gold" onclick="saveEmployee()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let employees = JSON.parse(localStorage.getItem('manpower_data') || '[]');
+let editingId = null;
+const STATIONS = ["Khamis Mushait Hub","Abha","Najran","Bisha","Sarat Abida","Muhayil","Dhahran Al Janub"];
+
+function save(){ localStorage.setItem('manpower_data', JSON.stringify(employees)); render(); }
+
+function daysUntil(dateStr){
+  if(!dateStr) return null;
+  const d = new Date(dateStr); const now = new Date();
+  d.setHours(0,0,0,0); now.setHours(0,0,0,0);
+  return Math.round((d-now)/86400000);
+}
+function expiryTag(dateStr){
+  if(!dateStr) return '<span class="tag tag-gray">No date</span>';
+  const days = daysUntil(dateStr);
+  if(days < 0) return `<span class="tag tag-danger">Expired ${Math.abs(days)}d ago</span>`;
+  if(days <= 30) return `<span class="tag tag-danger">${days}d left</span>`;
+  if(days <= 60) return `<span class="tag tag-warn">${days}d left</span>`;
+  return `<span class="tag tag-ok">${days}d left</span>`;
+}
+function isOnLeaveToday(e){
+  if(!e.leaveStart || !e.leaveEnd) return false;
+  const now = new Date(); now.setHours(0,0,0,0);
+  return new Date(e.leaveStart) <= now && now <= new Date(e.leaveEnd);
+}
+function isActive(e){ return !e.lwd; }
+function waLink(mobile){
+  if(!mobile) return '';
+  let n = mobile.replace(/[^0-9]/g,'');
+  if(n.startsWith('0')) n = '966' + n.slice(1);
+  if(!n.startsWith('966') && n.length===9) n = '966'+n;
+  return `https://wa.me/${n}`;
+}
+
+function populateStationFilter(){
+  const sel = document.getElementById('stationFilter');
+  sel.innerHTML = '<option value="">All Stations</option>' + STATIONS.map(s=>`<option>${s}</option>`).join('');
+}
+
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===name));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel'+name[0].toUpperCase()+name.slice(1)).classList.add('active');
+}
+
+function getFiltered(){
+  const q = document.getElementById('searchBox').value.toLowerCase();
+  const st = document.getElementById('stationFilter').value;
+  const status = document.getElementById('statusFilter').value;
+  return employees.filter(e=>{
+    if(q && !(`${e.name} ${e.empNo} ${e.iqama} ${e.mobile}`.toLowerCase().includes(q))) return false;
+    if(st && e.station !== st) return false;
+    if(status==='active' && !isActive(e)) return false;
+    if(status==='exited' && isActive(e)) return false;
+    if(status==='leave' && !isOnLeaveToday(e)) return false;
+    return true;
+  });
+}
+
+function rowHtml(e, cols){
+  const actions = `
+    ${e.mobile ? `<a class="wa-btn" href="${waLink(e.mobile)}" target="_blank">WhatsApp</a>` : ''}
+    <button class="btn-sm edit-btn" onclick="openModal('${e.id}')">Edit</button>
+    <button class="btn-sm del-btn" onclick="deleteEmployee('${e.id}')">Del</button>`;
+  return `<tr>
+    <td>${e.name||''}</td>
+    ${cols.includes('empNo')?`<td>${e.empNo||''}</td>`:''}
+    ${cols.includes('station')?`<td>${e.station||''}</td>`:''}
+    ${cols.includes('iqama')?`<td>${e.iqama||''}<br>${expiryTag(e.iqamaExp)}</td>`:''}
+    ${cols.includes('profession')?`<td>${e.profession||''}</td>`:''}
+    ${cols.includes('license')?`<td>${e.licType||''}<br>${expiryTag(e.licExp)}</td>`:''}
+    ${cols.includes('leave')?`<td>${e.leaveStart||'—'} → ${e.leaveEnd||'—'} ${isOnLeaveToday(e)?'<span class="tag tag-warn">On leave</span>':''}</td>`:''}
+    ${cols.includes('status')?`<td>${isActive(e)?'<span class="tag tag-ok">Active</span>':'<span class="tag tag-gray">Exited '+e.lwd+'</span>'}</td>`:''}
+    ${cols.includes('mobile')?`<td>${e.mobile||''}</td>`:''}
+    ${cols.includes('vehicle')?`<td>${e.vehiclePlate||''}<br><span style="color:var(--sub)">${[e.vehicleBrand,e.vehicleName].filter(Boolean).join(' ')}</span>${e.vendor?` · ${e.vendor}`:''}</td>`:''}
+    <td>${actions}</td>
+  </tr>`;
+}
+
+function render(){
+  const filtered = getFiltered();
+
+  // KPIs
+  const total = employees.length;
+  const active = employees.filter(isActive).length;
+  const onLeave = employees.filter(isOnLeaveToday).length;
+  const iqamaExpSoon = employees.filter(e=>e.iqamaExp && daysUntil(e.iqamaExp)<=30).length;
+  const licExpSoon = employees.filter(e=>e.licExp && daysUntil(e.licExp)<=30).length;
+  document.getElementById('kpiRow').innerHTML = `
+    <div class="kpi"><div class="num">${total}</div><div class="lbl">Total Employees</div></div>
+    <div class="kpi"><div class="num">${active}</div><div class="lbl">Active</div></div>
+    <div class="kpi"><div class="num">${onLeave}</div><div class="lbl">On Leave Today</div></div>
+    <div class="kpi ${iqamaExpSoon?'alert-danger':''}"><div class="num">${iqamaExpSoon}</div><div class="lbl">Iqama Expiring ≤30d</div></div>
+    <div class="kpi ${licExpSoon?'alert-warn':''}"><div class="num">${licExpSoon}</div><div class="lbl">License Expiring ≤30d</div></div>
+  `;
+
+  // All tab
+  const allCols = ['empNo','station','iqama','profession','license','leave','status','mobile','vehicle'];
+  document.getElementById('tableAll').innerHTML = `<tr><th>Name</th><th>Emp No.</th><th>Station</th><th>Iqama</th><th>Profession</th><th>License</th><th>Leave</th><th>Status</th><th>Mobile</th><th>Vehicle</th><th>Actions</th></tr>` +
+    (filtered.length? filtered.map(e=>rowHtml(e,allCols)).join('') : `<tr><td colspan="11" class="empty">No records. Add an employee or upload an Excel file.</td></tr>`);
+
+  // Iqama expiry tab (sorted soonest first, excludes exited)
+  const iqamaList = filtered.filter(e=>isActive(e)&&e.iqamaExp).sort((a,b)=>daysUntil(a.iqamaExp)-daysUntil(b.iqamaExp));
+  document.getElementById('tableIqama').innerHTML = `<tr><th>Name</th><th>Station</th><th>Iqama</th><th>Profession</th><th>Mobile</th><th>Actions</th></tr>` +
+    (iqamaList.length? iqamaList.map(e=>rowHtml(e,['station','iqama','profession','mobile'])).join('') : `<tr><td colspan="6" class="empty">No iqama expiry data.</td></tr>`);
+
+  // License expiry tab
+  const licList = filtered.filter(e=>isActive(e)&&e.licExp).sort((a,b)=>daysUntil(a.licExp)-daysUntil(b.licExp));
+  document.getElementById('tableLicense').innerHTML = `<tr><th>Name</th><th>Station</th><th>License</th><th>Mobile</th><th>Vehicle</th><th>Actions</th></tr>` +
+    (licList.length? licList.map(e=>rowHtml(e,['station','license','mobile','vehicle'])).join('') : `<tr><td colspan="6" class="empty">No license expiry data.</td></tr>`);
+
+  // On leave tab
+  const leaveList = filtered.filter(isOnLeaveToday);
+  document.getElementById('tableLeave').innerHTML = `<tr><th>Name</th><th>Station</th><th>Leave</th><th>Mobile</th><th>Actions</th></tr>` +
+    (leaveList.length? leaveList.map(e=>rowHtml(e,['station','leave','mobile'])).join('') : `<tr><td colspan="5" class="empty">Nobody on leave today.</td></tr>`);
+
+  // Inactive tab
+  const inactiveList = filtered.filter(e=>!isActive(e));
+  document.getElementById('tableInactive').innerHTML = `<tr><th>Name</th><th>Station</th><th>Status</th><th>Mobile</th><th>Actions</th></tr>` +
+    (inactiveList.length? inactiveList.map(e=>rowHtml(e,['station','status','mobile'])).join('') : `<tr><td colspan="5" class="empty">No exited employees.</td></tr>`);
+}
+
+// Modal
+function openModal(id){
+  editingId = id || null;
+  document.getElementById('modalTitle').textContent = id ? 'Edit Employee' : 'Add Employee';
+  const e = id ? employees.find(x=>x.id===id) : {};
+  document.getElementById('f_name').value = e.name||'';
+  document.getElementById('f_empNo').value = e.empNo||'';
+  document.getElementById('f_iqama').value = e.iqama||'';
+  document.getElementById('f_iqamaExp').value = e.iqamaExp||'';
+  document.getElementById('f_profession').value = e.profession||'';
+  document.getElementById('f_mobile').value = e.mobile||'';
+  document.getElementById('f_station').value = e.station||STATIONS[0];
+  document.getElementById('f_join').value = e.join||'';
+  document.getElementById('f_lwd').value = e.lwd||'';
+  document.getElementById('f_leaveStart').value = e.leaveStart||'';
+  document.getElementById('f_leaveEnd').value = e.leaveEnd||'';
+  document.getElementById('f_licType').value = e.licType||'';
+  document.getElementById('f_licExp').value = e.licExp||'';
+  document.getElementById('f_vehiclePlate').value = e.vehiclePlate||'';
+  document.getElementById('f_vehicleBrand').value = e.vehicleBrand||'';
+  document.getElementById('f_vehicleName').value = e.vehicleName||'';
+  document.getElementById('f_vendor').value = e.vendor||'';
+  document.getElementById('modalBg').classList.add('active');
+}
+function closeModal(){ document.getElementById('modalBg').classList.remove('active'); }
+
+function saveEmployee(){
+  const name = document.getElementById('f_name').value.trim();
+  if(!name){ alert('Employee name is required.'); return; }
+  const data = {
+    id: editingId || ('e'+Date.now()+Math.random().toString(36).slice(2,7)),
+    name,
+    empNo: document.getElementById('f_empNo').value.trim(),
+    iqama: document.getElementById('f_iqama').value.trim(),
+    iqamaExp: document.getElementById('f_iqamaExp').value,
+    profession: document.getElementById('f_profession').value.trim(),
+    mobile: document.getElementById('f_mobile').value.trim(),
+    station: document.getElementById('f_station').value,
+    join: document.getElementById('f_join').value,
+    lwd: document.getElementById('f_lwd').value,
+    leaveStart: document.getElementById('f_leaveStart').value,
+    leaveEnd: document.getElementById('f_leaveEnd').value,
+    licType: document.getElementById('f_licType').value,
+    licExp: document.getElementById('f_licExp').value,
+    vehiclePlate: document.getElementById('f_vehiclePlate').value.trim(),
+    vehicleBrand: document.getElementById('f_vehicleBrand').value.trim(),
+    vehicleName: document.getElementById('f_vehicleName').value.trim(),
+    vendor: document.getElementById('f_vendor').value.trim(),
+  };
+  if(editingId){
+    employees = employees.map(e=>e.id===editingId?data:e);
+  } else {
+    employees.push(data);
+  }
+  closeModal();
+  save();
+}
+function deleteEmployee(id){
+  if(!confirm('Delete this employee record?')) return;
+  employees = employees.filter(e=>e.id!==id);
+  save();
+}
+
+// Excel import/export
+const HEADER_MAP = {
+  'employee name':'name','name':'name',
+  'employee number':'empNo','emp no':'empNo','emp no.':'empNo','employee no':'empNo','staff id':'empNo','id':'empNo',
+  'iqama number':'iqama','iqama':'iqama',
+  'iqama expiry':'iqamaExp','iqama expiry date':'iqamaExp',
+  'profession':'profession','profession (on iqama)':'profession',
+  'mobile number':'mobile','mobile':'mobile',
+  'station':'station','department':'station','station/department':'station',
+  'joining date':'join','join date':'join',
+  'last working day':'lwd',
+  'leave start':'leaveStart',
+  'leave end':'leaveEnd',
+  'license type':'licType',
+  'license expiry':'licExp','license expiry date':'licExp',
+  'vehicle plate':'vehiclePlate','vehicle number':'vehiclePlate','plate':'vehiclePlate',
+  'vehicle brand':'vehicleBrand','brand':'vehicleBrand',
+  'vehicle name':'vehicleName',
+  'vendor':'vendor'
+};
+function excelDate(v){
+  if(!v) return '';
+  if(typeof v === 'number'){
+    const d = XLSX.SSF.parse_date_code(v);
+    return `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`;
+  }
+  return String(v).trim();
+}
+function handleUpload(evt){
+  const file = evt.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const wb = XLSX.read(e.target.result, {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+      let added = 0;
+      rows.forEach(r=>{
+        const rec = {};
+        Object.keys(r).forEach(k=>{
+          const key = HEADER_MAP[k.toLowerCase().trim()];
+          if(key) rec[key] = ['iqamaExp','join','lwd','leaveStart','leaveEnd','licExp'].includes(key) ? excelDate(r[k]) : String(r[k]).trim();
+        });
+        if(rec.name){
+          rec.id = 'e'+Date.now()+Math.random().toString(36).slice(2,7);
+          employees.push(rec);
+          added++;
+        }
+      });
+      save();
+      alert(`Imported ${added} records.`);
+    }catch(err){
+      alert('Could not read this file. Make sure it matches the template columns.');
+    }
+    evt.target.value = '';
+  };
+  reader.readAsArrayBuffer(file);
+}
+function downloadTemplate(){
+  const headers = ['Employee Name','Employee Number','Iqama Number','Iqama Expiry','Profession','Mobile Number','Station','Joining Date','Last Working Day','Leave Start','Leave End','License Type','License Expiry','Vehicle Plate','Vehicle Brand','Vehicle Name','Vendor'];
+  const ws = XLSX.utils.aoa_to_sheet([headers]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Template');
+  XLSX.writeFile(wb, 'manpower_template.xlsx');
+}
+function exportMaster(){
+  const headers = ['Employee Name','Employee Number','Iqama Number','Iqama Expiry','Profession','Mobile Number','Station','Joining Date','Last Working Day','Leave Start','Leave End','License Type','License Expiry','Vehicle Plate','Vehicle Brand','Vehicle Name','Vendor'];
+  const data = employees.map(e=>[e.name,e.empNo,e.iqama,e.iqamaExp,e.profession,e.mobile,e.station,e.join,e.lwd,e.leaveStart,e.leaveEnd,e.licType,e.licExp,e.vehiclePlate,e.vehicleBrand,e.vehicleName,e.vendor]);
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Manpower Master');
+  XLSX.writeFile(wb, `manpower_master_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+populateStationFilter();
+render();
+</script>
+</body>
+</html>

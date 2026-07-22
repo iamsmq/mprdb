@@ -200,16 +200,15 @@
       <div><label>Iqama Expiry</label><input type="date" id="f_iqamaExp"></div>
       <div><label>Profession (on Iqama)</label><input type="text" id="f_profession"></div>
       <div><label>Mobile Number</label><input type="text" id="f_mobile" placeholder="9665XXXXXXXX"></div>
-      <div><label>Station / Department</label>
+      <div><label>Station</label>
         <select id="f_station">
-          <option>Khamis Mushait Hub</option>
-          <option>Abha</option>
-          <option>Najran</option>
-          <option>Bisha</option>
-          <option>Sarat Abida</option>
+          <option>Khamis Mushayt</option>
+          <option>Bishah</option>
+          <option>Namas</option>
+          <option>Wadi Dawasir</option>
           <option>Muhayil</option>
-          <option>Dhahran Al Janub</option>
-          <option>Other</option>
+          <option>Najran</option>
+          <option>Jazan</option>
         </select>
       </div>
       <div><label>Operator (Outsourcing Company)</label><input type="text" id="f_operator" placeholder="Direct / vendor company name"></div>
@@ -277,7 +276,7 @@ let tokenClient = null;
 let gapiReady = false;
 let gisReady = false;
 
-const STATIONS = ["Khamis Mushait Hub","Abha","Najran","Bisha","Sarat Abida","Muhayil","Dhahran Al Janub"];
+const STATIONS = ["Khamis Mushayt","Bishah","Namas","Wadi Dawasir","Muhayil","Najran","Jazan"];
 
 function setStatus(text, level){
   document.getElementById('statusText').textContent = text;
